@@ -13,6 +13,8 @@ const profileRoutes = require('./routes/profile');
 
 const app = express();
 
+app.set('trust proxy', 1);  // ← ADD THIS LINE
+
 // ---------- RATE LIMITING ----------
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
