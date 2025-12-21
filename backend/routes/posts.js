@@ -11,9 +11,21 @@ router.get('/', async (req, res) => {
     const category = req.query.category;
     const sort = req.query.sort || '-createdAt';
     const query = category && category !== 'All' ? { category } : {};
-    const posts = await Post.find(query).populate('author', 'username avatar').sort(sort).limit(limit).skip((page - 1) * limit);
+    
+    const posts = await Post.find(query)
+      .populate('author', 'username avatar')
+      .sort(sort)
+      .limit(limit)
+      .skip((page - 1) * limit);
+    
     const total = await Post.countDocuments(query);
-    res.json({ posts, currentPage: page, totalPages: Math.ceil(total / limit), total });
+    
+    res.json({ 
+      posts, 
+      currentPage: page, 
+      totalPages: Math.ceil(total / limit), 
+      total 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -21,12 +33,16 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('author', 'username avatar bio');
+    const post = await Post.findById(req.params.id)
+      .populate('author', 'username avatar bio');
+    
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
+    
     post.views = (post.views || 0) + 1;
     await post.save();
+    
     res.json(post);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -36,23 +52,45 @@ router.get('/:id', async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { title, content, type, category } = req.body;
-    const post = new Post({ title, content, author: req.user, type, category });
+    
+    const post = new Post({ 
+      title, 
+      content, 
+      author: req.user.userId,  // ← Fixed: Use userId from decoded token
+      type, 
+      category 
+    });
+    
     await post.save();
     await post.populate('author', 'username avatar');
+    
     res.status(201).json(post);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error creating post:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      details: error.errors
+    });
   }
 });
 
 router.post('/:id/vote', auth, async (req, res) => {
   try {
     const { voteType } = req.body;
-    const existingVote = await Vote.findOne({ user: req.user, targetType: 'post', targetId: req.params.id });
+    
+    const existingVote = await Vote.findOne({ 
+      user: req.user.userId,  // ← Fixed: Use userId
+      targetType: 'post', 
+      targetId: req.params.id 
+    });
+    
     const post = await Post.findById(req.params.id);
+    
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
+    
     if (existingVote) {
       if (existingVote.voteType === voteType) {
         await Vote.deleteOne({ _id: existingVote._id });
@@ -63,9 +101,15 @@ router.post('/:id/vote', auth, async (req, res) => {
         post.votes += voteType * 2;
       }
     } else {
-      await Vote.create({ user: req.user, targetType: 'post', targetId: req.params.id, voteType });
+      await Vote.create({ 
+        user: req.user.userId,  // ← Fixed: Use userId
+        targetType: 'post', 
+        targetId: req.params.id, 
+        voteType 
+      });
       post.votes += voteType;
     }
+    
     await post.save();
     res.json({ votes: post.votes });
   } catch (error) {
