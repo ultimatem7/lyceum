@@ -75,4 +75,10 @@ mongoose
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
 // ---------- SERVER START ----------
-const PORT = process.env.PORT ||
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log('\n🚀 Lyceum Backend Server Started');
+  console.log(`📍 Server: http://localhost:${PORT}`);
+  console.log(`🏥 Health: http://localhost:${PORT}/api/health`);
+  console.log('\n📚 Ready to accept requests!\n');
+});
