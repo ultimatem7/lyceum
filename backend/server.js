@@ -10,7 +10,7 @@ const essayRoutes = require('./routes/essays');
 const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
 const profileRoutes = require('./routes/profile');
-const uploadRoutes = require('./routes/upload'); // if you created upload routes
+// const uploadRoutes = require('./routes/upload'); // if you created upload routes
 
 const app = express();
 
