@@ -44,17 +44,27 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ---------- ROUTES ----------
-app.use('/api/auth', authRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/essays', essayRoutes);
-app.use('/api/comments', commentRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/profile', profileRoutes);
+// ---------- ROUTE DIAGNOSTIC ----------
+console.log('🔍 Loading routes...');
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Lyceum API is running' });
-});
+const routes = [
+  { name: 'auth', path: '/api/auth' },
+  { name: 'posts', path: '/api/posts' },
+  { name: 'essays', path: '/api/essays' },
+  { name: 'comments', path: '/api/comments' },
+  { name: 'users', path: '/api/users' },
+  { name: 'profile', path: '/api/profile' }
+];
+
+for (const route of routes) {
+  try {
+    const routeModule = require(`./routes/${route.name}`);
+    console.log(`✅ ${route.name}Routes loaded`);
+    app.use(route.path, routeModule);
+  } catch (e) {
+    console.error(`❌ ${route.name}Routes failed:`, e.message);
+  }
+}
 
 // ---------- ERROR HANDLER ----------
 app.use((err, req, res, next) => {
