@@ -52,7 +52,7 @@ app.use('/api/essays', essayRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/upload', uploadRoutes); // if you have upload.js
+// app.use('/api/upload', uploadRoutes); // if you have upload.js
 
 // Health check
 app.get('/api/health', (req, res) => {
