@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api'
+  // Point to your active Render backend
+  baseURL: 'https://lyceum-final.onrender.com'  // ← Use your actual URL
 });
 
 API.interceptors.request.use((config) => {
