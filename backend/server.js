@@ -57,6 +57,15 @@ app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
 // app.use('/api/upload', uploadRoutes); // if you have upload.js
 
+// ---------- ERROR HANDLING (ADD THIS) ----------
+app.use((err, req, res, next) => {
+  console.error('🚨 ERROR:', err.stack);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    message: err.message 
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
