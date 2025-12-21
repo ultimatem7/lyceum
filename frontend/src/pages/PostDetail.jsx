@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import API from '../utils/api';
 
@@ -7,19 +7,32 @@ const PostDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
 
+  // Detect if this is an essay or post based on the URL
+  const isEssay = location.pathname.includes('/essay/');
+  const contentType = isEssay ? 'essays' : 'posts';
+
   useEffect(() => {
-    API.get(`/posts/${id}`).then(res => setPost(res.data)).catch(err => console.error(err));
-    API.get(`/comments?postId=${id}`).then(res => setComments(res.data)).catch(err => console.error(err));
-  }, [id]);
+    // Fetch the correct content type
+    API.get(`/${contentType}/${id}`)
+      .then(res => setPost(res.data))
+      .catch(err => console.error(err));
+    
+    // Fetch comments with correct query param
+    const queryParam = isEssay ? `essayId=${id}` : `postId=${id}`;
+    API.get(`/comments?${queryParam}`)
+      .then(res => setComments(res.data))
+      .catch(err => console.error(err));
+  }, [id, contentType, isEssay]);
 
   const handleVote = async (voteType) => {
     if (!user) return navigate('/login');
     try {
-      const { data } = await API.post(`/posts/${id}/vote`, { voteType });
+      const { data } = await API.post(`/${contentType}/${id}/vote`, { voteType });
       setPost(prev => ({ ...prev, votes: data.votes }));
     } catch (err) {
       console.error(err);
@@ -30,7 +43,11 @@ const PostDetail = () => {
     e.preventDefault();
     if (!user) return navigate('/login');
     try {
-      const { data } = await API.post('/comments', { content: newComment, postId: id });
+      const commentData = {
+        content: newComment,
+        ...(isEssay ? { essayId: id } : { postId: id })
+      };
+      const { data } = await API.post('/comments', commentData);
       setComments([data, ...comments]);
       setNewComment('');
     } catch (err) {
