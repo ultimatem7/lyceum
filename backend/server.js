@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -9,25 +10,49 @@ const essayRoutes = require('./routes/essays');
 const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
 const profileRoutes = require('./routes/profile');
+const uploadRoutes = require('./routes/upload'); // if you created upload routes
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ---------- CORS CONFIG ----------
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://ultimatem7-lyceum.vercel.app' // your Vercel URL
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow tools like Postman (no origin)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  })
+);
+app.options('*', cors());
+
+// ---------- BODY PARSING ----------
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected successfully'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+// ---------- STATIC UPLOADS (optional) ----------
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+// ---------- ROUTES ----------
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/essays', essayRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/upload', uploadRoutes); // if you have upload.js
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -44,10 +69,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ---------- DATABASE ----------
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log('✅ MongoDB connected successfully'))
+  .catch((err) => console.error('❌ MongoDB connection error:', err));
+
+// ---------- SERVER START ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`\n🚀 Lyceum Backend Server Started`);
+  console.log('\n🚀 Lyceum Backend Server Started');
   console.log(`📍 Server: http://localhost:${PORT}`);
   console.log(`🏥 Health: http://localhost:${PORT}/api/health`);
-  console.log(`\n📚 Ready to accept requests!\n`);
+  console.log('\n📚 Ready to accept requests!\n');
 });
