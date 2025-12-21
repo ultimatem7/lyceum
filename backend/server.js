@@ -18,7 +18,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://ultimatem7-lyceum.vercel.app' // your Vercel URL
+  'https://lyceum-theta.vercel.app' // your Vercel URL
 ];
 
 app.use(
