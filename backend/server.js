@@ -10,12 +10,10 @@ const essayRoutes = require('./routes/essays');
 const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
 const profileRoutes = require('./routes/profile');
-// const uploadRoutes = require('./routes/upload'); // if you created upload routes
 
 const app = express();
 
 // ---------- CORS CONFIG ----------
-// ---------- CORS CONFIG (TEMPORARY: ALLOW ALL) ----------
 app.use(
   cors({
     origin: '*', // allow all origins
@@ -27,13 +25,9 @@ app.use(
 // Handle preflight for all routes
 app.options('*', cors());
 
-
 // ---------- BODY PARSING ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ---------- STATIC UPLOADS (optional) ----------
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---------- ROUTES ----------
 app.use('/api/auth', authRoutes);
@@ -42,7 +36,6 @@ app.use('/api/essays', essayRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
-// app.use('/api/upload', uploadRoutes); // if you have upload.js
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -61,7 +54,6 @@ app.get('/api/health', (req, res) => {
 
 // ---------- DATABASE ----------
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
-
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB connected successfully'))
