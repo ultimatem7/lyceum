@@ -15,28 +15,18 @@ const profileRoutes = require('./routes/profile');
 const app = express();
 
 // ---------- CORS CONFIG ----------
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://lyceum-theta.vercel.app' // your Vercel URL
-];
-
+// ---------- CORS CONFIG (TEMPORARY: ALLOW ALL) ----------
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow tools like Postman (no origin)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('Not allowed by CORS'));
-    },
+    origin: '*', // allow all origins
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
+
+// Handle preflight for all routes
 app.options('*', cors());
+
 
 // ---------- BODY PARSING ----------
 app.use(express.json());
