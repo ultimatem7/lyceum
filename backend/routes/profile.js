@@ -57,14 +57,20 @@ router.put('/update', auth, async (req, res) => {
     if (interests !== undefined) updateData.interests = interests;
     if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
 
+    // Use req.user.userId from auth middleware, NOT username from params
     const user = await User.findByIdAndUpdate(
-      req.user.userId,
+      req.user.userId,  // ← From JWT token
       { $set: updateData },
       { new: true }
     ).select('-password');
 
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.json(user);
   } catch (error) {
+    console.error('Profile update error:', error);
     res.status(500).json({ message: error.message });
   }
 });
