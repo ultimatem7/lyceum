@@ -43,7 +43,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ---------- STATIC UPLOADS (optional) ----------
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---------- ROUTES ----------
 app.use('/api/auth', authRoutes);
