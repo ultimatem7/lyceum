@@ -2,6 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -10,10 +11,11 @@ const essayRoutes = require('./routes/essays');
 const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
 const profileRoutes = require('./routes/profile');
+// const uploadRoutes = require('./routes/upload'); // if you created upload routes
 
 const app = express();
 
-// ---------- CORS (TIGHT BUT CORRECT) ----------
+// ---------- CORS CONFIG ----------
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -23,7 +25,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow tools like Postman / curl (no origin)
+      // allow tools like Postman (no origin)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -36,12 +38,15 @@ app.use(
   })
 );
 
-// Handle preflight for all routes
+// Preflight handler
 app.options('*', cors());
 
 // ---------- BODY PARSING ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ---------- STATIC UPLOADS (optional) ----------
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---------- ROUTES ----------
 app.use('/api/auth', authRoutes);
@@ -50,6 +55,7 @@ app.use('/api/essays', essayRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
+// app.use('/api/upload', uploadRoutes); // if you have upload.js
 
 // Health check
 app.get('/api/health', (req, res) => {
