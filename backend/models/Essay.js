@@ -1,0 +1,51 @@
+const mongoose = require('mongoose');
+
+const essaySchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  content: {
+    type: String,
+    required: true
+  },
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['essay', 'poem', 'reflection', 'analysis', 'dialogue'],
+    default: 'essay'
+  },
+  category: {
+    type: String,
+    enum: ['Ethics', 'Metaphysics', 'Epistemology', 'Political Philosophy', 'Philosophy of Mind', 
+           'Philosophy of Religion', 'Aesthetics', 'Logic', 'Eastern Philosophy', 'Other'],
+    default: 'Other'
+  },
+  published: {
+    type: Boolean,
+    default: true
+  },
+  votes: {
+    type: Number,
+    default: 0
+  },
+  views: {
+    type: Number,
+    default: 0
+  },
+  commentCount: {
+    type: Number,
+    default: 0
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = mongoose.model('Essay', essaySchema);

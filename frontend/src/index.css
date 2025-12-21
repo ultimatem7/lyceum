@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-marble text-navy;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif italic;
+  }
+}
+
+@layer components {
+  .greek-card {
+    @apply bg-white border-3 border-navy shadow-greek hover:shadow-greek-hover transition-all duration-300;
+  }
+
+  .greek-button {
+    @apply bg-navy text-cream border-3 border-navy px-6 py-3 font-serif italic text-lg
+           hover:bg-white hover:text-navy transition-all duration-300 cursor-pointer;
+  }
+
+  .greek-button-outline {
+    @apply bg-white text-navy border-3 border-navy px-6 py-3 font-serif italic text-lg
+           hover:bg-navy hover:text-cream transition-all duration-300 cursor-pointer;
+  }
+
+  .greek-input {
+    @apply border-3 border-navy bg-white px-4 py-3 focus:outline-none focus:ring-4 focus:ring-navy/20;
+  }
+
+  .marble-texture {
+    background-image: 
+      linear-gradient(90deg, rgba(44,78,107,0.02) 1px, transparent 1px),
+      linear-gradient(rgba(44,78,107,0.02) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F2E8;
+  border-left: 2px solid #2C4E6B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2C4E6B;
+  border: 2px solid #F5F2E8;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1a2f42;
+}
