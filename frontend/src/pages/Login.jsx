@@ -71,6 +71,20 @@ const Login = () => {
               />
             </div>
 
+            {/* ✅ NEW: Forgot Password + Remember Me */}
+            <div className="flex items-center justify-between mb-6">
+              <label className="flex items-center">
+                <input type="checkbox" className="mr-2 w-4 h-4 text-navy bg-gray-100 border-gray-300 rounded focus:ring-navy focus:ring-2" />
+                <span className="text-navy/60 text-sm font-serif italic">Remember me</span>
+              </label>
+              <Link 
+                to="/forgot-password" 
+                className="text-navy/60 text-sm font-serif italic hover:underline hover:text-navy"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             <button type="submit" disabled={loading} className="w-full greek-button disabled:opacity-50">
               {loading ? 'Entering...' : 'Enter Lyceum'}
             </button>
