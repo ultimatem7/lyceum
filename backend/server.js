@@ -36,7 +36,8 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://lyceum-theta.vercel.app'
+  'https://lyceum-theta.vercel.app',
+  'https://lyceum.blog'
 ];
 
 app.use(cors({
