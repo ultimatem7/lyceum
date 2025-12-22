@@ -38,14 +38,38 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // ✅ ADD THESE 2 FUNCTIONS:
+  const forgotPassword = async (email) => {
+    const { data } = await API.post('/auth/forgot-password', { email });
+    return data;
+  };
+
+  const resetPassword = async (token, password) => {
+    const { data } = await API.post(`/auth/reset-password/${token}`, { password });
+    // Clear localStorage after successful reset
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
   };
 
+  // ✅ ADD forgotPassword + resetPassword to value:
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      forgotPassword,    // ✅ NEW
+      resetPassword,     // ✅ NEW
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );
