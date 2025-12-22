@@ -10,6 +10,8 @@ import Essays from './pages/Essays';
 import Create from './pages/Create';
 import PostDetail from './pages/PostDetail';
 import Profile from './pages/Profile';
+import ForgotPassword from './pages/ForgotPassword';  // ✅ NEW
+import ResetPassword from './pages/ResetPassword';   // ✅ NEW
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />     {/* ✅ NEW */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} /> {/* ✅ NEW */}
             <Route path="/forum" element={<Forum />} />
             <Route path="/essays" element={<Essays />} />
             <Route path="/create" element={<Create />} />
