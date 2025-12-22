@@ -7,7 +7,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   
   try {
     const data = await resend.emails.send({
-      from: 'Lyceum <noreply@lyceum.blog>',
+      from: 'Lyceum <theinneraxiom@gmail.com>',
       to: [email],
       subject: 'Lyceum - Password Reset Request',
       html: `
