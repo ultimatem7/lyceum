@@ -6,13 +6,23 @@ const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState(''); // ✅ NEW
   const [error, setError] = useState('');
+  const [passwordMatch, setPasswordMatch] = useState(true);  // ✅ NEW
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // ✅ NEW: Check password match BEFORE backend call
+    if (password !== confirmPassword) {
+      setPasswordMatch(false);
+      setError('Passwords do not match');
+      return;
+    }
+
     setError('');
     setLoading(true);
     try {
@@ -20,6 +30,7 @@ const Register = () => {
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
+      setPasswordMatch(true); // Reset match error on backend error
     } finally {
       setLoading(false);
     }
@@ -78,12 +89,47 @@ const Register = () => {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  // Clear errors when typing
+                  if (!passwordMatch) {
+                    setPasswordMatch(true);
+                    setError('');
+                  }
+                }}
                 className="greek-input w-full"
                 placeholder="••••••••"
                 minLength={6}
                 required
               />
+            </div>
+
+            {/* ✅ NEW: Confirm Password Field */}
+            <div>
+              <label className="block text-navy font-serif italic text-lg mb-2">Confirm Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setPasswordMatch(password === e.target.value);
+                  if (password === e.target.value && error.includes('Passwords do not match')) {
+                    setError('');
+                  }
+                }}
+                className={`greek-input w-full ${
+                  passwordMatch 
+                    ? '' 
+                    : 'border-red-400 focus:border-red-500 ring-1 ring-red-200'
+                }`}
+                placeholder="••••••••"
+                required
+              />
+              {!passwordMatch && (
+                <p className="text-red-600 text-sm mt-1 font-serif italic">
+                  Passwords do not match
+                </p>
+              )}
             </div>
 
             <button type="submit" disabled={loading} className="w-full greek-button disabled:opacity-50">
