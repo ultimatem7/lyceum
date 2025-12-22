@@ -1,5 +1,5 @@
-const Resend = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const { Resend } = require('resend');  // ✅ CORRECT IMPORT
+const resend = new Resend(process.env.RESEND_API_KEY);  // ✅ WORKS
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, resetToken) => {
@@ -7,7 +7,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   
   try {
     const data = await resend.emails.send({
-      from: 'Lyceum <noreply@lyceum.blog>',  // Verify domain in Resend dashboard
+      from: 'Lyceum <noreply@lyceum.blog>',
       to: [email],
       subject: 'Lyceum - Password Reset Request',
       html: `
