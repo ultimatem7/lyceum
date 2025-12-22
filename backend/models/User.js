@@ -21,6 +21,15 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  
+  // ADD THESE TWO FIELDS FOR PASSWORD RESET:
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
+  },
+  
   // Profile fields
   bio: {
     type: String,
@@ -38,6 +47,7 @@ const userSchema = new mongoose.Schema({
   interests: [{
     type: String
   }],
+  
   // Statistics
   totalViews: {
     type: Number,
@@ -47,6 +57,7 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  
   // Awards/Badges
   awards: [{
     name: String,
@@ -57,6 +68,7 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  
   // Activity tracking
   postsCount: {
     type: Number,
@@ -70,6 +82,7 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  
   // Account info
   joinedAt: {
     type: Date,
