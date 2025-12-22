@@ -1,4 +1,5 @@
-const resend = require('resend').Resend(process.env.RESEND_API_KEY);
+const Resend = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, resetToken) => {
