@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto'); // ADD THIS
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const { sendPasswordResetEmail } = require('../utils/email'); // ADD THIS
 
 // Register
 router.post('/register', [
@@ -153,6 +155,141 @@ router.post('/google', async (req, res) => {
   } catch (error) {
     console.error('Google auth error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// ========== PASSWORD RESET ROUTES (ADD THESE) ==========
+
+// Request password reset
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { email } = req.body;
+    
+    // Find user by email
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      // Don't reveal if email exists or not (security best practice)
+      return res.json({ 
+        message: 'If that email exists, a reset link has been sent.' 
+      });
+    }
+    
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token before saving to database
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+    
+    // Save hashed token and expiry to user
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+    
+    // Send email with unhashed token
+    await sendPasswordResetEmail(user.email, resetToken);
+    
+    res.json({ 
+      message: 'If that email exists, a reset link has been sent.' 
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ 
+      message: 'Error sending reset email',
+      error: error.message 
+    });
+  }
+});
+
+// Verify reset token (optional - for checking if token is valid)
+router.get('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Hash the token from URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+    
+    // Find user with valid token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Invalid or expired reset token' 
+      });
+    }
+    
+    res.json({ message: 'Token is valid' });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error verifying token',
+      error: error.message 
+    });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password/:token', [
+  body('password').isLength({ min: 6 })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+    
+    // Hash the token from URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+    
+    // Find user with valid token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Invalid or expired reset token' 
+      });
+    }
+    
+    // Update password (will be hashed by pre-save hook)
+    user.password = password;
+    
+    // Clear reset token fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    
+    await user.save();
+    
+    res.json({ message: 'Password reset successful! You can now login.' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ 
+      message: 'Error resetting password',
+      error: error.message 
+    });
   }
 });
 
