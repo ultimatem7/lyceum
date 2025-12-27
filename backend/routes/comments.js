@@ -3,8 +3,10 @@ const router = express.Router();
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const Essay = require('../models/Essay');
-const Vote = require('../models/Vote');
+const User = require('../models/User');
+const CommentReaction = require('../models/CommentReaction');
 const auth = require('../middleware/auth');
+const { sendCommentNotificationEmail } = require('../utils/email');
 
 router.get('/', async (req, res) => {
   try {
@@ -24,7 +26,18 @@ router.get('/', async (req, res) => {
         const replies = await Comment.find({ parentComment: comment._id })
           .populate('author', 'username avatar')
           .sort('createdAt');
-        return { ...comment.toObject(), replies };
+        const commentObj = comment.toObject();
+        // Ensure insightful and notHelpful are included (they default to 0)
+        if (!commentObj.insightful) commentObj.insightful = 0;
+        if (!commentObj.notHelpful) commentObj.notHelpful = 0;
+        // Add counts to replies as well
+        const repliesWithCounts = replies.map(reply => {
+          const replyObj = reply.toObject();
+          if (!replyObj.insightful) replyObj.insightful = 0;
+          if (!replyObj.notHelpful) replyObj.notHelpful = 0;
+          return replyObj;
+        });
+        return { ...commentObj, replies: repliesWithCounts };
       })
     );
     
@@ -47,16 +60,105 @@ router.post('/', auth, async (req, res) => {
     });
     
     await comment.save();
-    await comment.populate('author', 'username avatar');
+    await comment.populate('author', 'username avatar email');
     
     if (postId) {
       await Post.findByIdAndUpdate(postId, { $inc: { commentCount: 1 } });
-    }
-    if (essayId) {
-      await Essay.findByIdAndUpdate(essayId, { $inc: { commentCount: 1 } });
+      
+      // Get post author to send notification
+      const post = await Post.findById(postId).populate('author', 'email username');
+      if (post && post.author && post.author._id.toString() !== req.user.userId.toString()) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const contentUrl = `${frontendUrl}/post/${postId}`;
+        try {
+          await sendCommentNotificationEmail(
+            post.author.email,
+            comment.author.username,
+            post.title,
+            content,
+            false,
+            null,
+            contentUrl
+          );
+        } catch (emailError) {
+          console.error('Error sending comment notification email:', emailError);
+          // Don't fail the request if email fails
+        }
+      }
     }
     
-    res.status(201).json(comment);
+    if (essayId) {
+      await Essay.findByIdAndUpdate(essayId, { $inc: { commentCount: 1 } });
+      
+      // Get essay author to send notification
+      const essay = await Essay.findById(essayId).populate('author', 'email username');
+      if (essay && essay.author && essay.author._id.toString() !== req.user.userId.toString()) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const contentUrl = `${frontendUrl}/essay/${essayId}`;
+        try {
+          await sendCommentNotificationEmail(
+            essay.author.email,
+            comment.author.username,
+            essay.title,
+            content,
+            false,
+            null,
+            contentUrl
+          );
+        } catch (emailError) {
+          console.error('Error sending comment notification email:', emailError);
+          // Don't fail the request if email fails
+        }
+      }
+    }
+    
+    // If this is a reply to a comment, notify the parent comment author
+    if (parentComment) {
+      const parentCommentDoc = await Comment.findById(parentComment).populate('author', 'email username');
+      if (parentCommentDoc && parentCommentDoc.author && parentCommentDoc.author._id.toString() !== req.user.userId.toString()) {
+        // Get the post or essay title
+        let contentTitle = 'your comment';
+        let contentUrl = '';
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        
+        if (postId) {
+          const post = await Post.findById(postId);
+          if (post) {
+            contentTitle = post.title;
+            contentUrl = `${frontendUrl}/post/${postId}`;
+          }
+        } else if (essayId) {
+          const essay = await Essay.findById(essayId);
+          if (essay) {
+            contentTitle = essay.title;
+            contentUrl = `${frontendUrl}/essay/${essayId}`;
+          }
+        }
+        
+        try {
+          await sendCommentNotificationEmail(
+            parentCommentDoc.author.email,
+            comment.author.username,
+            contentTitle,
+            content,
+            true,
+            parentCommentDoc.author.username,
+            contentUrl
+          );
+        } catch (emailError) {
+          console.error('Error sending reply notification email:', emailError);
+          // Don't fail the request if email fails
+        }
+      }
+    }
+    
+    // Remove email from response before sending
+    const commentResponse = comment.toObject();
+    if (commentResponse.author && commentResponse.author.email) {
+      delete commentResponse.author.email;
+    }
+    
+    res.status(201).json(commentResponse);
   } catch (error) {
     console.error('Error creating comment:', error);
     res.status(500).json({ 
@@ -67,14 +169,17 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-router.post('/:id/vote', auth, async (req, res) => {
+router.post('/:id/reaction', auth, async (req, res) => {
   try {
-    const { voteType } = req.body;
+    const { reactionType } = req.body; // 'insightful' or 'notHelpful'
     
-    const existingVote = await Vote.findOne({ 
-      user: req.user.userId,  // ← Fixed: Use userId
-      targetType: 'comment', 
-      targetId: req.params.id 
+    if (!['insightful', 'notHelpful'].includes(reactionType)) {
+      return res.status(400).json({ message: 'Invalid reaction type. Must be "insightful" or "notHelpful"' });
+    }
+    
+    const existingReaction = await CommentReaction.findOne({ 
+      user: req.user.userId,
+      commentId: req.params.id 
     });
     
     const comment = await Comment.findById(req.params.id);
@@ -83,27 +188,34 @@ router.post('/:id/vote', auth, async (req, res) => {
       return res.status(404).json({ message: 'Comment not found' });
     }
     
-    if (existingVote) {
-      if (existingVote.voteType === voteType) {
-        await Vote.deleteOne({ _id: existingVote._id });
-        comment.votes -= voteType;
+    if (existingReaction) {
+      if (existingReaction.reactionType === reactionType) {
+        // Remove reaction if clicking the same reaction again
+        await CommentReaction.deleteOne({ _id: existingReaction._id });
+        comment[reactionType] -= 1;
       } else {
-        existingVote.voteType = voteType;
-        await existingVote.save();
-        comment.votes += voteType * 2;
+        // Switch reaction type
+        const oldType = existingReaction.reactionType;
+        existingReaction.reactionType = reactionType;
+        await existingReaction.save();
+        comment[oldType] -= 1;
+        comment[reactionType] += 1;
       }
     } else {
-      await Vote.create({ 
-        user: req.user.userId,  // ← Fixed: Use userId
-        targetType: 'comment', 
-        targetId: req.params.id, 
-        voteType 
+      // New reaction
+      await CommentReaction.create({ 
+        user: req.user.userId,
+        commentId: req.params.id, 
+        reactionType 
       });
-      comment.votes += voteType;
+      comment[reactionType] += 1;
     }
     
     await comment.save();
-    res.json({ votes: comment.votes });
+    res.json({ 
+      insightful: comment.insightful,
+      notHelpful: comment.notHelpful
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

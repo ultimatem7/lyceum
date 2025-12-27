@@ -104,9 +104,28 @@ const Profile = () => {
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-4xl font-serif italic text-navy">{profile.username}</h1>
               {isOwnProfile && !editing && (
-                <button onClick={() => setEditing(true)} className="greek-button-outline">
-                  Edit Profile
-                </button>
+                <div className="flex space-x-3">
+                  <button onClick={() => setEditing(true)} className="greek-button-outline">
+                    Edit Profile
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to delete your account? This action cannot be undone and will delete all your posts, essays, and comments.')) {
+                        try {
+                          await API.delete('/profile/delete-account');
+                          localStorage.removeItem('token');
+                          window.location.href = '/';
+                        } catch (error) {
+                          console.error('Error deleting account:', error);
+                          alert('Failed to delete account. Please try again.');
+                        }
+                      }
+                    }}
+                    className="greek-button-outline border-red-500 text-red-500 hover:bg-red-500 hover:text-cream"
+                  >
+                    Delete Account
+                  </button>
+                </div>
               )}
             </div>
 
@@ -200,8 +219,8 @@ const Profile = () => {
           <div className="text-navy/60 text-sm">Total Views</div>
         </div>
         <div className="greek-card p-4 text-center">
-          <div className="text-3xl font-serif italic text-navy mb-1">{stats?.totalUpvotes || 0}</div>
-          <div className="text-navy/60 text-sm">Total Upvotes</div>
+          <div className="text-3xl font-serif italic text-navy mb-1">💡 {stats?.totalUpvotes || 0}</div>
+          <div className="text-navy/60 text-sm">Total Lightbulbs</div>
         </div>
       </div>
 

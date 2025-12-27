@@ -11,6 +11,8 @@ const PostDetail = () => {
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyContent, setReplyContent] = useState('');
 
   // Detect if this is an essay or post based on the URL
   const isEssay = location.pathname.includes('/essay/');
@@ -33,7 +35,7 @@ const PostDetail = () => {
     if (!user) return navigate('/login');
     try {
       const { data } = await API.post(`/${contentType}/${id}/vote`, { voteType });
-      setPost(prev => ({ ...prev, votes: data.votes }));
+      setPost(prev => ({ ...prev, lightbulbs: data.lightbulbs }));
     } catch (err) {
       console.error(err);
     }
@@ -48,11 +50,140 @@ const PostDetail = () => {
         ...(isEssay ? { essayId: id } : { postId: id })
       };
       const { data } = await API.post('/comments', commentData);
-      setComments([data, ...comments]);
+      // Refresh comments to get the nested structure
+      const queryParam = isEssay ? `essayId=${id}` : `postId=${id}`;
+      const commentsRes = await API.get(`/comments?${queryParam}`);
+      setComments(commentsRes.data);
       setNewComment('');
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleReply = async (parentCommentId) => {
+    if (!user) return navigate('/login');
+    if (!replyContent.trim()) return;
+    
+    try {
+      const commentData = {
+        content: replyContent,
+        parentComment: parentCommentId,
+        ...(isEssay ? { essayId: id } : { postId: id })
+      };
+      await API.post('/comments', commentData);
+      // Refresh comments
+      const queryParam = isEssay ? `essayId=${id}` : `postId=${id}`;
+      const commentsRes = await API.get(`/comments?${queryParam}`);
+      setComments(commentsRes.data);
+      setReplyContent('');
+      setReplyingTo(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCommentReaction = async (commentId, reactionType) => {
+    if (!user) return navigate('/login');
+    try {
+      const { data } = await API.post(`/comments/${commentId}/reaction`, { reactionType });
+      // Update the comment in the comments array
+      const updateCommentInTree = (comments) => {
+        return comments.map(comment => {
+          if (comment._id === commentId) {
+            return { ...comment, insightful: data.insightful, notHelpful: data.notHelpful };
+          }
+          if (comment.replies) {
+            return { ...comment, replies: updateCommentInTree(comment.replies) };
+          }
+          return comment;
+        });
+      };
+      setComments(updateCommentInTree(comments));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const CommentItem = ({ comment, depth = 0 }) => {
+    const isReplying = replyingTo === comment._id;
+    
+    return (
+      <div className={depth > 0 ? 'ml-8 mt-4 border-l-2 border-navy/30 pl-4' : ''}>
+        <div className="border-l-3 border-navy pl-6">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="w-8 h-8 rounded-full border-2 border-navy bg-cream flex items-center justify-center">
+              <span className="text-navy text-sm">{comment.author?.username?.[0]?.toUpperCase() || 'A'}</span>
+            </div>
+            <span className="font-serif italic text-navy">{comment.author?.username || 'Anonymous'}</span>
+            <span className="text-navy/40 text-sm">{new Date(comment.createdAt).toLocaleDateString()}</span>
+          </div>
+          <p className="text-navy/80 mb-3">{comment.content}</p>
+          
+          {/* Insightful/Not Helpful buttons */}
+          <div className="flex items-center space-x-4 mb-3">
+            <button
+              onClick={() => handleCommentReaction(comment._id, 'insightful')}
+              className="flex items-center space-x-1 px-3 py-1 border-2 border-navy hover:bg-navy hover:text-cream transition-colors text-sm"
+            >
+              <span>💡</span>
+              <span className="font-serif italic">Insightful ({comment.insightful || 0})</span>
+            </button>
+            <button
+              onClick={() => handleCommentReaction(comment._id, 'notHelpful')}
+              className="flex items-center space-x-1 px-3 py-1 border-2 border-navy hover:bg-navy hover:text-cream transition-colors text-sm"
+            >
+              <span>❌</span>
+              <span className="font-serif italic">Not Helpful ({comment.notHelpful || 0})</span>
+            </button>
+            <button
+              onClick={() => setReplyingTo(isReplying ? null : comment._id)}
+              className="px-3 py-1 border-2 border-navy hover:bg-navy hover:text-cream transition-colors text-sm font-serif italic"
+            >
+              Reply
+            </button>
+          </div>
+
+          {/* Reply form */}
+          {isReplying && user && (
+            <div className="mb-4 mt-2">
+              <textarea
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                className="greek-input w-full mb-2"
+                rows={3}
+                placeholder="Write a reply..."
+              />
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleReply(comment._id)}
+                  className="greek-button text-sm"
+                >
+                  Post Reply
+                </button>
+                <button
+                  onClick={() => {
+                    setReplyingTo(null);
+                    setReplyContent('');
+                  }}
+                  className="greek-button-outline text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Nested replies */}
+          {comment.replies && comment.replies.length > 0 && (
+            <div className="mt-4">
+              {comment.replies.map(reply => (
+                <CommentItem key={reply._id} comment={reply} depth={depth + 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (!post) return (
@@ -61,19 +192,26 @@ const PostDetail = () => {
     </div>
   );
 
+  // Calculate total comments including replies
+  const totalComments = comments.reduce((total, comment) => {
+    return total + 1 + (comment.replies ? comment.replies.length : 0);
+  }, 0);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="greek-card p-8 mb-6">
         <div className="flex items-start space-x-6">
           <div className="flex flex-col items-center space-y-2">
             <button onClick={() => handleVote(1)} 
-                    className="w-10 h-10 border-3 border-navy flex items-center justify-center hover:bg-navy hover:text-cream">
-              ▲
+                    className="w-10 h-10 border-3 border-navy flex items-center justify-center hover:bg-navy hover:text-cream transition-colors"
+                    title="Increase lightbulbs">
+              💡
             </button>
-            <span className="font-serif italic text-2xl text-navy">{post.votes || 0}</span>
+            <span className="font-serif italic text-2xl text-navy">{post.lightbulbs || 0}</span>
             <button onClick={() => handleVote(-1)} 
-                    className="w-10 h-10 border-3 border-navy flex items-center justify-center hover:bg-navy hover:text-cream">
-              ▼
+                    className="w-10 h-10 border-3 border-navy flex items-center justify-center hover:bg-navy hover:text-cream transition-colors"
+                    title="Decrease lightbulbs">
+              ⬇
             </button>
           </div>
 
@@ -94,7 +232,7 @@ const PostDetail = () => {
       </div>
 
       <div className="greek-card p-8">
-        <h2 className="text-3xl font-serif italic text-navy mb-6">Comments ({comments.length})</h2>
+        <h2 className="text-3xl font-serif italic text-navy mb-6">Comments ({totalComments})</h2>
 
         {user ? (
           <form onSubmit={handleComment} className="mb-8">
@@ -113,17 +251,8 @@ const PostDetail = () => {
           {comments.length === 0 ? (
             <p className="text-center text-navy/60 font-serif italic">No comments yet</p>
           ) : (
-            comments.map(c => (
-              <div key={c._id} className="border-l-3 border-navy pl-6">
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className="w-8 h-8 rounded-full border-2 border-navy bg-cream flex items-center justify-center">
-                    <span className="text-navy text-sm">{c.author?.username?.[0]?.toUpperCase() || 'A'}</span>
-                  </div>
-                  <span className="font-serif italic text-navy">{c.author?.username || 'Anonymous'}</span>
-                  <span className="text-navy/40 text-sm">{new Date(c.createdAt).toLocaleDateString()}</span>
-                </div>
-                <p className="text-navy/80">{c.content}</p>
-              </div>
+            comments.map(comment => (
+              <CommentItem key={comment._id} comment={comment} />
             ))
           )}
         </div>

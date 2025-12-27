@@ -8,7 +8,7 @@ const voteSchema = new mongoose.Schema({
   },
   targetType: {
     type: String,
-    enum: ['post', 'essay', 'comment'],
+    enum: ['post', 'essay'],
     required: true
   },
   targetId: {
@@ -17,7 +17,7 @@ const voteSchema = new mongoose.Schema({
   },
   voteType: {
     type: Number,
-    enum: [1, -1],
+    enum: [1, -1], // 1 for up (lightbulb up), -1 for down (lightbulb down)
     required: true
   },
   createdAt: {

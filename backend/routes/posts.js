@@ -94,11 +94,11 @@ router.post('/:id/vote', auth, async (req, res) => {
     if (existingVote) {
       if (existingVote.voteType === voteType) {
         await Vote.deleteOne({ _id: existingVote._id });
-        post.votes -= voteType;
+        post.lightbulbs -= voteType;
       } else {
         existingVote.voteType = voteType;
         await existingVote.save();
-        post.votes += voteType * 2;
+        post.lightbulbs += voteType * 2;
       }
     } else {
       await Vote.create({ 
@@ -107,11 +107,11 @@ router.post('/:id/vote', auth, async (req, res) => {
         targetId: req.params.id, 
         voteType 
       });
-      post.votes += voteType;
+      post.lightbulbs += voteType;
     }
     
     await post.save();
-    res.json({ votes: post.votes });
+    res.json({ lightbulbs: post.lightbulbs });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

@@ -6,13 +6,10 @@ const PostCard = ({ post }) => {
     <Link to={`/post/${post._id}`} className="block greek-card p-6 mb-4">
       <div className="flex items-start space-x-4">
         <div className="flex flex-col items-center space-y-1">
-          <button className="w-8 h-8 border-2 border-navy flex items-center justify-center hover:bg-navy hover:text-cream transition-colors">
-            ▲
-          </button>
-          <span className="font-serif italic text-lg">{post.votes || 0}</span>
-          <button className="w-8 h-8 border-2 border-navy flex items-center justify-center hover:bg-navy hover:text-cream transition-colors">
-            ▼
-          </button>
+          <div className="w-8 h-8 border-2 border-navy flex items-center justify-center bg-cream">
+            💡
+          </div>
+          <span className="font-serif italic text-lg">{post.lightbulbs || 0}</span>
         </div>
 
         <div className="flex-1">

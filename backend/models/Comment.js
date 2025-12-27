@@ -23,7 +23,11 @@ const commentSchema = new mongoose.Schema({
     ref: 'Comment',
     default: null
   },
-  votes: {
+  insightful: {
+    type: Number,
+    default: 0
+  },
+  notHelpful: {
     type: Number,
     default: 0
   },

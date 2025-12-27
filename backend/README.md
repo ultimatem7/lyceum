@@ -85,6 +85,8 @@ Required in `.env`:
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret key for JWT tokens (use long random string)
 - `NODE_ENV` - development or production
+- `RESEND_API_KEY` - API key for Resend email service (for password reset and comment notifications)
+- `FRONTEND_URL` - Frontend URL (e.g., http://localhost:5173 or https://lyceum.blog)
 
 ## Project Structure
 

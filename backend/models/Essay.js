@@ -30,7 +30,7 @@ const essaySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  votes: {
+  lightbulbs: {
     type: Number,
     default: 0
   },

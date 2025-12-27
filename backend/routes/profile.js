@@ -4,6 +4,8 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const Essay = require('../models/Essay');
 const Comment = require('../models/Comment');
+const Vote = require('../models/Vote');
+const CommentReaction = require('../models/CommentReaction');
 const auth = require('../middleware/auth');
 
 // Get user profile by username
@@ -95,29 +97,30 @@ router.get('/:username/stats', async (req, res) => {
       { $group: { _id: null, total: { $sum: '$views' } } }
     ]);
 
-    // Calculate total upvotes
-    const postUpvotes = await Post.aggregate([
+    // Calculate total lightbulbs
+    const postLightbulbs = await Post.aggregate([
       { $match: { author: user._id } },
-      { $group: { _id: null, total: { $sum: '$votes' } } }
+      { $group: { _id: null, total: { $sum: '$lightbulbs' } } }
     ]);
 
-    const essayUpvotes = await Essay.aggregate([
+    const essayLightbulbs = await Essay.aggregate([
       { $match: { author: user._id } },
-      { $group: { _id: null, total: { $sum: '$votes' } } }
+      { $group: { _id: null, total: { $sum: '$lightbulbs' } } }
     ]);
 
     const totalViews = (postViews[0]?.total || 0) + (essayViews[0]?.total || 0);
-    const totalUpvotes = (postUpvotes[0]?.total || 0) + (essayUpvotes[0]?.total || 0);
+    const totalLightbulbs = (postLightbulbs[0]?.total || 0) + (essayLightbulbs[0]?.total || 0);
 
-    // Update user stats
+    // Update user stats (keep totalUpvotes for backward compatibility but use lightbulbs)
     await User.findByIdAndUpdate(user._id, {
       totalViews,
-      totalUpvotes
+      totalUpvotes: totalLightbulbs
     });
 
     res.json({
       totalViews,
-      totalUpvotes,
+      totalUpvotes: totalLightbulbs,
+      totalLightbulbs,
       postsCount: user.postsCount,
       essaysCount: user.essaysCount,
       commentsCount: user.commentsCount,
@@ -149,6 +152,42 @@ router.post('/:username/award', auth, async (req, res) => {
     res.json(user.awards);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete account (authenticated user only - deletes their own account)
+router.delete('/delete-account', auth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Find user to verify they exist
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Delete all user's votes
+    await Vote.deleteMany({ user: userId });
+    
+    // Delete all user's comment reactions
+    await CommentReaction.deleteMany({ user: userId });
+    
+    // Delete all user's comments
+    await Comment.deleteMany({ author: userId });
+    
+    // Delete all user's posts
+    await Post.deleteMany({ author: userId });
+    
+    // Delete all user's essays
+    await Essay.deleteMany({ author: userId });
+    
+    // Finally, delete the user
+    await User.findByIdAndDelete(userId);
+    
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ message: 'Error deleting account', error: error.message });
   }
 });
 
