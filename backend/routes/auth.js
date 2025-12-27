@@ -162,7 +162,7 @@ router.post('/google', async (req, res) => {
 
 // Request password reset
 router.post('/forgot-password', [
-  body('email').isEmail().normalizeEmail()
+  body('email').isEmail()
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -170,10 +170,27 @@ router.post('/forgot-password', [
   }
 
   try {
-    const { email } = req.body;
+    // Capture original email before normalization
+    const originalEmail = req.body.email;
     
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Normalize email for database lookup (lowercase and trim)
+    // Note: We don't use normalizeEmail() here to preserve dots in Gmail addresses
+    // but we still need to match what's in the database
+    const emailForLookup = originalEmail.toLowerCase().trim();
+    
+    // Try to find user by the lookup email
+    let user = await User.findOne({ email: emailForLookup });
+    
+    // If not found, try with dots removed (in case user registered with normalized email)
+    if (!user && emailForLookup.includes('@gmail.com')) {
+      const emailWithoutDots = emailForLookup.replace(/\./g, '');
+      user = await User.findOne({ 
+        $or: [
+          { email: emailForLookup },
+          { email: emailWithoutDots }
+        ]
+      });
+    }
     
     if (!user) {
       // Don't reveal if email exists or not (security best practice)
@@ -196,8 +213,8 @@ router.post('/forgot-password', [
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
     
-    // Send email with unhashed token
-    await sendPasswordResetEmail(user.email, resetToken);
+    // Send email to the original email format provided by user (preserves dots)
+    await sendPasswordResetEmail(originalEmail, resetToken);
     
     res.json({ 
       message: 'If that email exists, a reset link has been sent.' 
