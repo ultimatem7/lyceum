@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
-const Vote = require('../models/Vote');
+const PostReaction = require('../models/PostReaction');
 const auth = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
@@ -75,14 +75,17 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-router.post('/:id/vote', auth, async (req, res) => {
+router.post('/:id/reaction', auth, async (req, res) => {
   try {
-    const { voteType } = req.body;
+    const { reactionType } = req.body; // 'insightful' or 'notHelpful'
     
-    const existingVote = await Vote.findOne({ 
-      user: req.user.userId,  // ← Fixed: Use userId
-      targetType: 'post', 
-      targetId: req.params.id 
+    if (!['insightful', 'notHelpful'].includes(reactionType)) {
+      return res.status(400).json({ message: 'Invalid reaction type. Must be "insightful" or "notHelpful"' });
+    }
+    
+    const existingReaction = await PostReaction.findOne({ 
+      user: req.user.userId,
+      postId: req.params.id 
     });
     
     const post = await Post.findById(req.params.id);
@@ -91,27 +94,34 @@ router.post('/:id/vote', auth, async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
     
-    if (existingVote) {
-      if (existingVote.voteType === voteType) {
-        await Vote.deleteOne({ _id: existingVote._id });
-        post.lightbulbs -= voteType;
+    if (existingReaction) {
+      if (existingReaction.reactionType === reactionType) {
+        // Remove reaction if clicking the same reaction again
+        await PostReaction.deleteOne({ _id: existingReaction._id });
+        post[reactionType] -= 1;
       } else {
-        existingVote.voteType = voteType;
-        await existingVote.save();
-        post.lightbulbs += voteType * 2;
+        // Switch reaction type
+        const oldType = existingReaction.reactionType;
+        existingReaction.reactionType = reactionType;
+        await existingReaction.save();
+        post[oldType] -= 1;
+        post[reactionType] += 1;
       }
     } else {
-      await Vote.create({ 
-        user: req.user.userId,  // ← Fixed: Use userId
-        targetType: 'post', 
-        targetId: req.params.id, 
-        voteType 
+      // New reaction
+      await PostReaction.create({ 
+        user: req.user.userId,
+        postId: req.params.id, 
+        reactionType 
       });
-      post.lightbulbs += voteType;
+      post[reactionType] += 1;
     }
     
     await post.save();
-    res.json({ lightbulbs: post.lightbulbs });
+    res.json({ 
+      insightful: post.insightful,
+      notHelpful: post.notHelpful
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

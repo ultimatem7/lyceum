@@ -68,6 +68,7 @@ router.post('/', auth, async (req, res) => {
       // Get post author to send notification
       const post = await Post.findById(postId).populate('author', 'email username');
       if (post && post.author && post.author._id.toString() !== req.user.userId.toString()) {
+        console.log(`📧 Comment on post - Sending notification to post author: ${post.author.email}`);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const contentUrl = `${frontendUrl}/post/${postId}`;
         try {
@@ -80,10 +81,13 @@ router.post('/', auth, async (req, res) => {
             null,
             contentUrl
           );
+          console.log(`✅ Comment notification email sent to post author: ${post.author.email}`);
         } catch (emailError) {
-          console.error('Error sending comment notification email:', emailError);
+          console.error('❌ Error sending comment notification email:', emailError);
           // Don't fail the request if email fails
         }
+      } else if (post && post.author) {
+        console.log(`⏭️ Skipping email - user commented on their own post`);
       }
     }
     
@@ -93,6 +97,7 @@ router.post('/', auth, async (req, res) => {
       // Get essay author to send notification
       const essay = await Essay.findById(essayId).populate('author', 'email username');
       if (essay && essay.author && essay.author._id.toString() !== req.user.userId.toString()) {
+        console.log(`📧 Comment on essay - Sending notification to essay author: ${essay.author.email}`);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const contentUrl = `${frontendUrl}/essay/${essayId}`;
         try {
@@ -105,10 +110,13 @@ router.post('/', auth, async (req, res) => {
             null,
             contentUrl
           );
+          console.log(`✅ Comment notification email sent to essay author: ${essay.author.email}`);
         } catch (emailError) {
-          console.error('Error sending comment notification email:', emailError);
+          console.error('❌ Error sending comment notification email:', emailError);
           // Don't fail the request if email fails
         }
+      } else if (essay && essay.author) {
+        console.log(`⏭️ Skipping email - user commented on their own essay`);
       }
     }
     
@@ -116,6 +124,7 @@ router.post('/', auth, async (req, res) => {
     if (parentComment) {
       const parentCommentDoc = await Comment.findById(parentComment).populate('author', 'email username');
       if (parentCommentDoc && parentCommentDoc.author && parentCommentDoc.author._id.toString() !== req.user.userId.toString()) {
+        console.log(`📧 Reply to comment - Sending notification to comment author: ${parentCommentDoc.author.email}`);
         // Get the post or essay title
         let contentTitle = 'your comment';
         let contentUrl = '';
@@ -145,10 +154,13 @@ router.post('/', auth, async (req, res) => {
             parentCommentDoc.author.username,
             contentUrl
           );
+          console.log(`✅ Reply notification email sent to comment author: ${parentCommentDoc.author.email}`);
         } catch (emailError) {
-          console.error('Error sending reply notification email:', emailError);
+          console.error('❌ Error sending reply notification email:', emailError);
           // Don't fail the request if email fails
         }
+      } else if (parentCommentDoc && parentCommentDoc.author) {
+        console.log(`⏭️ Skipping email - user replied to their own comment`);
       }
     }
     

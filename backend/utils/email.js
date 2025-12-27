@@ -198,6 +198,10 @@ View ${isReply ? 'reply' : 'comment'}: ${contentUrl}
 Lyceum - Philosophy Discussion Platform
     `;
 
+    console.log('📧 Sending comment notification email via Resend...');
+    console.log('   To:', email);
+    console.log('   Subject:', subject);
+    
     const data = await resend.emails.send({
       from: 'Lyceum <theinneraxiom@gmail.com>',
       to: [email],
@@ -207,6 +211,7 @@ Lyceum - Philosophy Discussion Platform
     });
 
     console.log('✅ Comment notification email sent to:', email);
+    console.log('📧 Resend Message ID:', data.id);
     return data;
   } catch (error) {
     console.error('❌ Resend error sending comment notification:', error);

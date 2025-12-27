@@ -9,7 +9,7 @@ const PostCard = ({ post }) => {
           <div className="w-8 h-8 border-2 border-navy flex items-center justify-center bg-cream">
             💡
           </div>
-          <span className="font-serif italic text-lg">{post.lightbulbs || 0}</span>
+          <span className="font-serif italic text-lg">{post.insightful || 0}</span>
         </div>
 
         <div className="flex-1">

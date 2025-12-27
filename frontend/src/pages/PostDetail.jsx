@@ -31,11 +31,11 @@ const PostDetail = () => {
       .catch(err => console.error(err));
   }, [id, contentType, isEssay]);
 
-  const handleVote = async (voteType) => {
+  const handleReaction = async (reactionType) => {
     if (!user) return navigate('/login');
     try {
-      const { data } = await API.post(`/${contentType}/${id}/vote`, { voteType });
-      setPost(prev => ({ ...prev, lightbulbs: data.lightbulbs }));
+      const { data } = await API.post(`/${contentType}/${id}/reaction`, { reactionType });
+      setPost(prev => ({ ...prev, insightful: data.insightful, notHelpful: data.notHelpful }));
     } catch (err) {
       console.error(err);
     }
@@ -202,16 +202,17 @@ const PostDetail = () => {
       <div className="greek-card p-8 mb-6">
         <div className="flex items-start space-x-6">
           <div className="flex flex-col items-center space-y-2">
-            <button onClick={() => handleVote(1)} 
-                    className="w-10 h-10 border-3 border-navy flex items-center justify-center hover:bg-navy hover:text-cream transition-colors"
-                    title="Increase lightbulbs">
-              💡
+            <button onClick={() => handleReaction('insightful')} 
+                    className="flex items-center space-x-2 px-4 py-2 border-3 border-navy hover:bg-navy hover:text-cream transition-colors"
+                    title="Mark as insightful">
+              <span>💡</span>
+              <span className="font-serif italic">Insightful ({post.insightful || 0})</span>
             </button>
-            <span className="font-serif italic text-2xl text-navy">{post.lightbulbs || 0}</span>
-            <button onClick={() => handleVote(-1)} 
-                    className="w-10 h-10 border-3 border-navy flex items-center justify-center hover:bg-navy hover:text-cream transition-colors"
-                    title="Decrease lightbulbs">
-              ⬇
+            <button onClick={() => handleReaction('notHelpful')} 
+                    className="flex items-center space-x-2 px-4 py-2 border-3 border-navy hover:bg-navy hover:text-cream transition-colors"
+                    title="Mark as not helpful">
+              <span>❌</span>
+              <span className="font-serif italic">Not Helpful ({post.notHelpful || 0})</span>
             </button>
           </div>
 

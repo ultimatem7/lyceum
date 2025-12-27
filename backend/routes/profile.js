@@ -6,6 +6,8 @@ const Essay = require('../models/Essay');
 const Comment = require('../models/Comment');
 const Vote = require('../models/Vote');
 const CommentReaction = require('../models/CommentReaction');
+const PostReaction = require('../models/PostReaction');
+const EssayReaction = require('../models/EssayReaction');
 const auth = require('../middleware/auth');
 
 // Get user profile by username
@@ -97,30 +99,30 @@ router.get('/:username/stats', async (req, res) => {
       { $group: { _id: null, total: { $sum: '$views' } } }
     ]);
 
-    // Calculate total lightbulbs
-    const postLightbulbs = await Post.aggregate([
+    // Calculate total insightful reactions
+    const postInsightful = await Post.aggregate([
       { $match: { author: user._id } },
-      { $group: { _id: null, total: { $sum: '$lightbulbs' } } }
+      { $group: { _id: null, total: { $sum: '$insightful' } } }
     ]);
 
-    const essayLightbulbs = await Essay.aggregate([
+    const essayInsightful = await Essay.aggregate([
       { $match: { author: user._id } },
-      { $group: { _id: null, total: { $sum: '$lightbulbs' } } }
+      { $group: { _id: null, total: { $sum: '$insightful' } } }
     ]);
 
     const totalViews = (postViews[0]?.total || 0) + (essayViews[0]?.total || 0);
-    const totalLightbulbs = (postLightbulbs[0]?.total || 0) + (essayLightbulbs[0]?.total || 0);
+    const totalInsightful = (postInsightful[0]?.total || 0) + (essayInsightful[0]?.total || 0);
 
-    // Update user stats (keep totalUpvotes for backward compatibility but use lightbulbs)
+    // Update user stats
     await User.findByIdAndUpdate(user._id, {
       totalViews,
-      totalUpvotes: totalLightbulbs
+      totalUpvotes: totalInsightful
     });
 
     res.json({
       totalViews,
-      totalUpvotes: totalLightbulbs,
-      totalLightbulbs,
+      totalUpvotes: totalInsightful,
+      totalInsightful,
       postsCount: user.postsCount,
       essaysCount: user.essaysCount,
       commentsCount: user.commentsCount,
@@ -166,11 +168,17 @@ router.delete('/delete-account', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Delete all user's votes
+    // Delete all user's votes (old system, if any)
     await Vote.deleteMany({ user: userId });
     
     // Delete all user's comment reactions
     await CommentReaction.deleteMany({ user: userId });
+    
+    // Delete all user's post reactions
+    await PostReaction.deleteMany({ user: userId });
+    
+    // Delete all user's essay reactions
+    await EssayReaction.deleteMany({ user: userId });
     
     // Delete all user's comments
     await Comment.deleteMany({ author: userId });

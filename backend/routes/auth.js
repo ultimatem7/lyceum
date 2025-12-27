@@ -176,7 +176,12 @@ router.post('/forgot-password', [
   try {
     // Use exact email format as provided - no normalization, no dot removal
     const email = req.body.email.trim();
+    // User model has lowercase: true, so we need to lowercase for lookup
+    // But we'll preserve original email for sending
+    const emailForLookup = email.toLowerCase();
+    
     console.log('🔍 Password reset requested for:', email);
+    console.log('🔍 Email for lookup (lowercased):', emailForLookup);
     
     // Check if RESEND_API_KEY is set
     if (!process.env.RESEND_API_KEY) {
@@ -186,17 +191,28 @@ router.post('/forgot-password', [
       });
     }
     
-    // Find user by exact email match (case-sensitive, preserves dots)
-    console.log('🔍 Looking up user with exact email:', email);
-    const user = await User.findOne({ email: email });
+    // Find user by email (User model stores emails in lowercase due to schema)
+    console.log('🔍 Looking up user with email:', emailForLookup);
+    const user = await User.findOne({ email: emailForLookup });
     
     if (!user) {
-      console.log('⚠️ User not found for email:', email);
+      console.log('⚠️ User not found for email:', emailForLookup);
+      
+      // Debug: Let's see what emails are actually in the database
+      const allUsers = await User.find({}, 'email').limit(10);
+      console.log('🔍 Sample emails in database:');
+      allUsers.forEach(u => {
+        console.log(`   - "${u.email}" (length: ${u.email?.length})`);
+      });
+      
       // Don't reveal if email exists or not (security best practice)
       return res.json({ 
         message: 'If that email exists, a reset link has been sent.' 
       });
     }
+    
+    console.log('✅ User found:', user.username);
+    console.log('✅ Email stored in DB:', user.email);
     
     console.log('✅ User found:', user.username);
     

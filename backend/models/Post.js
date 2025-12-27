@@ -26,7 +26,11 @@ const postSchema = new mongoose.Schema({
            'Philosophy of Religion', 'Aesthetics', 'Logic', 'Eastern Philosophy', 'Other'],
     default: 'Other'
   },
-  lightbulbs: {
+  insightful: {
+    type: Number,
+    default: 0
+  },
+  notHelpful: {
     type: Number,
     default: 0
   },

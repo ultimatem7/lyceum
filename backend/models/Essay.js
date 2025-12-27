@@ -30,7 +30,11 @@ const essaySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  lightbulbs: {
+  insightful: {
+    type: Number,
+    default: 0
+  },
+  notHelpful: {
     type: Number,
     default: 0
   },

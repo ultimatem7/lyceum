@@ -219,8 +219,8 @@ const Profile = () => {
           <div className="text-navy/60 text-sm">Total Views</div>
         </div>
         <div className="greek-card p-4 text-center">
-          <div className="text-3xl font-serif italic text-navy mb-1">💡 {stats?.totalUpvotes || 0}</div>
-          <div className="text-navy/60 text-sm">Total Lightbulbs</div>
+          <div className="text-3xl font-serif italic text-navy mb-1">💡 {stats?.totalInsightful || stats?.totalUpvotes || 0}</div>
+          <div className="text-navy/60 text-sm">Total Insightful</div>
         </div>
       </div>
 

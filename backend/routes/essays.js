@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Essay = require('../models/Essay');
-const Vote = require('../models/Vote');
+const EssayReaction = require('../models/EssayReaction');
 const auth = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
@@ -80,14 +80,17 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-router.post('/:id/vote', auth, async (req, res) => {
+router.post('/:id/reaction', auth, async (req, res) => {
   try {
-    const { voteType } = req.body;
+    const { reactionType } = req.body; // 'insightful' or 'notHelpful'
     
-    const existingVote = await Vote.findOne({ 
-      user: req.user.userId,  // ← Fixed: Use userId
-      targetType: 'essay', 
-      targetId: req.params.id 
+    if (!['insightful', 'notHelpful'].includes(reactionType)) {
+      return res.status(400).json({ message: 'Invalid reaction type. Must be "insightful" or "notHelpful"' });
+    }
+    
+    const existingReaction = await EssayReaction.findOne({ 
+      user: req.user.userId,
+      essayId: req.params.id 
     });
     
     const essay = await Essay.findById(req.params.id);
@@ -96,27 +99,34 @@ router.post('/:id/vote', auth, async (req, res) => {
       return res.status(404).json({ message: 'Essay not found' });
     }
     
-    if (existingVote) {
-      if (existingVote.voteType === voteType) {
-        await Vote.deleteOne({ _id: existingVote._id });
-        essay.lightbulbs -= voteType;
+    if (existingReaction) {
+      if (existingReaction.reactionType === reactionType) {
+        // Remove reaction if clicking the same reaction again
+        await EssayReaction.deleteOne({ _id: existingReaction._id });
+        essay[reactionType] -= 1;
       } else {
-        existingVote.voteType = voteType;
-        await existingVote.save();
-        essay.lightbulbs += voteType * 2;
+        // Switch reaction type
+        const oldType = existingReaction.reactionType;
+        existingReaction.reactionType = reactionType;
+        await existingReaction.save();
+        essay[oldType] -= 1;
+        essay[reactionType] += 1;
       }
     } else {
-      await Vote.create({ 
-        user: req.user.userId,  // ← Fixed: Use userId
-        targetType: 'essay', 
-        targetId: req.params.id, 
-        voteType 
+      // New reaction
+      await EssayReaction.create({ 
+        user: req.user.userId,
+        essayId: req.params.id, 
+        reactionType 
       });
-      essay.lightbulbs += voteType;
+      essay[reactionType] += 1;
     }
     
     await essay.save();
-    res.json({ lightbulbs: essay.lightbulbs });
+    res.json({ 
+      insightful: essay.insightful,
+      notHelpful: essay.notHelpful
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

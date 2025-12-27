@@ -15,7 +15,7 @@ const EssayCard = ({ essay }) => {
       <div className="flex items-center justify-between pt-4 border-t-2 border-stone">
         <span className="font-serif italic text-navy">{essay.author?.username || 'Anonymous'}</span>
         <div className="flex items-center space-x-4 text-sm text-navy/60">
-          <span>💡 {essay.lightbulbs || 0}</span>
+          <span>💡 {essay.insightful || 0}</span>
           <span>{essay.views || 0} views</span>
         </div>
       </div>
