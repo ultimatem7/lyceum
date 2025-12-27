@@ -19,19 +19,21 @@ router.post('/register', [
 
   try {
     const { username, email, password } = req.body;
-    // Store email exactly as provided (preserves dots, case-sensitive)
-    const emailToStore = email.trim();
+    // User model has lowercase: true, so emails are stored in lowercase
+    // But we preserve dots - just lowercase for consistency
+    const emailToStore = email.toLowerCase().trim();
 
-    // Check if user already exists (using exact email match)
+    // Check if user already exists (email will be lowercased by schema)
     let user = await User.findOne({ $or: [{ email: emailToStore }, { username }] });
     if (user) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     // Create new user (password will be hashed by pre-save hook)
+    // Email will be lowercased by schema, but we've already lowercased it
     user = new User({ 
       username, 
-      email: emailToStore, // Store exact email format
+      email: emailToStore, // Lowercased but dots preserved
       password  // Pass plain password - User model will hash it
     });
 
@@ -70,10 +72,11 @@ router.post('/login', [
 
   try {
     const { email, password } = req.body;
-    // Use exact email format (preserves dots)
-    const emailToLookup = email.trim();
+    // User model has lowercase: true, so we need to lowercase for lookup
+    // This preserves dots but ensures case-insensitive matching
+    const emailToLookup = email.toLowerCase().trim();
 
-    // Find user by exact email match
+    // Find user by email (stored in lowercase due to schema)
     const user = await User.findOne({ email: emailToLookup });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
