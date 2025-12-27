@@ -9,7 +9,7 @@ const { sendPasswordResetEmail } = require('../utils/email'); // ADD THIS
 // Register
 router.post('/register', [
   body('username').trim().isLength({ min: 3 }).escape(),
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail(), // Removed normalizeEmail() to preserve dots
   body('password').isLength({ min: 6 })
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -19,9 +19,11 @@ router.post('/register', [
 
   try {
     const { username, email, password } = req.body;
+    // Store email exactly as provided (preserves dots, case-sensitive)
+    const emailToStore = email.trim();
 
-    // Check if user already exists
-    let user = await User.findOne({ $or: [{ email }, { username }] });
+    // Check if user already exists (using exact email match)
+    let user = await User.findOne({ $or: [{ email: emailToStore }, { username }] });
     if (user) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -29,7 +31,7 @@ router.post('/register', [
     // Create new user (password will be hashed by pre-save hook)
     user = new User({ 
       username, 
-      email, 
+      email: emailToStore, // Store exact email format
       password  // Pass plain password - User model will hash it
     });
 
@@ -58,7 +60,7 @@ router.post('/register', [
 
 // Login
 router.post('/login', [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail(), // Removed normalizeEmail() to preserve dots
   body('password').exists()
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -68,9 +70,11 @@ router.post('/login', [
 
   try {
     const { email, password } = req.body;
+    // Use exact email format (preserves dots)
+    const emailToLookup = email.trim();
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by exact email match
+    const user = await User.findOne({ email: emailToLookup });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -170,9 +174,9 @@ router.post('/forgot-password', [
   }
 
   try {
-    // Capture original email before normalization
-    const originalEmail = req.body.email;
-    console.log('🔍 Password reset requested for:', originalEmail);
+    // Use exact email format as provided - no normalization, no dot removal
+    const email = req.body.email.trim();
+    console.log('🔍 Password reset requested for:', email);
     
     // Check if RESEND_API_KEY is set
     if (!process.env.RESEND_API_KEY) {
@@ -182,29 +186,12 @@ router.post('/forgot-password', [
       });
     }
     
-    // Normalize email for database lookup (lowercase and trim)
-    // Note: We don't use normalizeEmail() here to preserve dots in Gmail addresses
-    // but we still need to match what's in the database
-    const emailForLookup = originalEmail.toLowerCase().trim();
-    console.log('🔍 Looking up user with email:', emailForLookup);
-    
-    // Try to find user by the lookup email
-    let user = await User.findOne({ email: emailForLookup });
-    
-    // If not found, try with dots removed (in case user registered with normalized email)
-    if (!user && emailForLookup.includes('@gmail.com')) {
-      const emailWithoutDots = emailForLookup.replace(/\./g, '');
-      console.log('🔍 Trying lookup without dots:', emailWithoutDots);
-      user = await User.findOne({ 
-        $or: [
-          { email: emailForLookup },
-          { email: emailWithoutDots }
-        ]
-      });
-    }
+    // Find user by exact email match (case-sensitive, preserves dots)
+    console.log('🔍 Looking up user with exact email:', email);
+    const user = await User.findOne({ email: email });
     
     if (!user) {
-      console.log('⚠️ User not found for email:', originalEmail);
+      console.log('⚠️ User not found for email:', email);
       // Don't reveal if email exists or not (security best practice)
       return res.json({ 
         message: 'If that email exists, a reset link has been sent.' 
@@ -228,9 +215,9 @@ router.post('/forgot-password', [
     await user.save();
     console.log('✅ Reset token saved to user');
     
-    // Send email to the original email format provided by user (preserves dots)
-    console.log('📧 Attempting to send password reset email to:', originalEmail);
-    await sendPasswordResetEmail(originalEmail, resetToken);
+    // Send email to exact email format provided (preserves all dots)
+    console.log('📧 Attempting to send password reset email to:', email);
+    await sendPasswordResetEmail(email, resetToken);
     console.log('✅ Password reset email sent successfully');
     
     res.json({ 
