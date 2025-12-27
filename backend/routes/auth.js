@@ -172,11 +172,21 @@ router.post('/forgot-password', [
   try {
     // Capture original email before normalization
     const originalEmail = req.body.email;
+    console.log('🔍 Password reset requested for:', originalEmail);
+    
+    // Check if RESEND_API_KEY is set
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY is not set in environment variables!');
+      return res.status(500).json({ 
+        message: 'Email service is not configured. Please contact support.' 
+      });
+    }
     
     // Normalize email for database lookup (lowercase and trim)
     // Note: We don't use normalizeEmail() here to preserve dots in Gmail addresses
     // but we still need to match what's in the database
     const emailForLookup = originalEmail.toLowerCase().trim();
+    console.log('🔍 Looking up user with email:', emailForLookup);
     
     // Try to find user by the lookup email
     let user = await User.findOne({ email: emailForLookup });
@@ -184,6 +194,7 @@ router.post('/forgot-password', [
     // If not found, try with dots removed (in case user registered with normalized email)
     if (!user && emailForLookup.includes('@gmail.com')) {
       const emailWithoutDots = emailForLookup.replace(/\./g, '');
+      console.log('🔍 Trying lookup without dots:', emailWithoutDots);
       user = await User.findOne({ 
         $or: [
           { email: emailForLookup },
@@ -193,11 +204,14 @@ router.post('/forgot-password', [
     }
     
     if (!user) {
+      console.log('⚠️ User not found for email:', originalEmail);
       // Don't reveal if email exists or not (security best practice)
       return res.json({ 
         message: 'If that email exists, a reset link has been sent.' 
       });
     }
+    
+    console.log('✅ User found:', user.username);
     
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -212,15 +226,19 @@ router.post('/forgot-password', [
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
+    console.log('✅ Reset token saved to user');
     
     // Send email to the original email format provided by user (preserves dots)
+    console.log('📧 Attempting to send password reset email to:', originalEmail);
     await sendPasswordResetEmail(originalEmail, resetToken);
+    console.log('✅ Password reset email sent successfully');
     
     res.json({ 
       message: 'If that email exists, a reset link has been sent.' 
     });
   } catch (error) {
-    console.error('Password reset error:', error);
+    console.error('❌ Password reset error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       message: 'Error sending reset email',
       error: error.message 

@@ -6,7 +6,15 @@ const resend = new Resend(process.env.RESEND_API_KEY);  // ✅ WORKS
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+  
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  
+  console.log('📧 Sending password reset email via Resend...');
+  console.log('   To:', email);
+  console.log('   Reset URL:', resetUrl);
   
   try {
     const data = await resend.emails.send({
@@ -92,10 +100,17 @@ Lyceum - Philosophy Discussion Platform
 
     console.log('✅ Password reset email sent to:', email);
     console.log('📧 Resend Message ID:', data.id);
+    console.log('📧 Resend Response:', JSON.stringify(data, null, 2));
     return data;
   } catch (error) {
-    console.error('❌ Resend error:', error);
-    throw new Error('Failed to send reset email');
+    console.error('❌ Resend error details:');
+    console.error('   Error message:', error.message);
+    console.error('   Error type:', error.constructor.name);
+    if (error.response) {
+      console.error('   Resend API response:', JSON.stringify(error.response, null, 2));
+    }
+    console.error('   Full error:', error);
+    throw new Error(`Failed to send reset email: ${error.message}`);
   }
 };
 
