@@ -2,19 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../utils/api';
 import PostCard from '../components/PostCard';
+import EssayCard from '../components/EssayCard';
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
+  const [essays, setEssays] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    API.get('/posts?limit=10').then(res => {
-      setPosts(res.data.posts);
-      setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+    // Fetch both posts and essays
+    Promise.all([
+      API.get('/posts?limit=10'),
+      API.get('/essays?limit=10')
+    ])
+      .then(([postsRes, essaysRes]) => {
+        setPosts(postsRes.data.posts || []);
+        setEssays(essaysRes.data.essays || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
@@ -24,6 +33,13 @@ const Home = () => {
       </div>
     );
   }
+
+  // Combine posts and essays, sort by creation date (most recent first)
+  const allContent = [...posts, ...essays].sort((a, b) => {
+    const dateA = new Date(a.createdAt);
+    const dateB = new Date(b.createdAt);
+    return dateB - dateA;
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -47,15 +63,26 @@ const Home = () => {
         </div>
       </div>
 
-      <h2 className="text-4xl font-serif italic text-navy mb-6">Recent Discussions</h2>
-      {posts.length === 0 ? (
+      <h2 className="text-4xl font-serif italic text-navy mb-6">Recent Content</h2>
+      {allContent.length === 0 ? (
         <div className="greek-card p-12 text-center">
-          <p className="text-navy/60 text-lg font-serif italic">No discussions yet</p>
+          <p className="text-navy/60 text-lg font-serif italic">No content yet</p>
           <Link to="/create" className="greek-button inline-block mt-4">Start First Discussion</Link>
         </div>
       ) : (
         <div className="space-y-4">
-          {posts.map(post => <PostCard key={post._id} post={post} />)}
+          {allContent.map(item => {
+            // Check if it's an essay (essays have type: 'essay', 'poem', 'reflection', 'analysis', 'dialogue')
+            // Posts have type: 'question', 'discussion'
+            const essayTypes = ['essay', 'poem', 'reflection', 'analysis', 'dialogue'];
+            const isEssay = item.type && essayTypes.includes(item.type);
+            
+            return isEssay ? (
+              <EssayCard key={item._id} essay={item} />
+            ) : (
+              <PostCard key={item._id} post={item} />
+            );
+          })}
         </div>
       )}
     </div>
