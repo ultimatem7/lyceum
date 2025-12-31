@@ -24,14 +24,21 @@ router.post('/register', [
     const emailToStore = email.toLowerCase().trim();
 
     // Check if user already exists (email will be lowercased by schema)
-    let user = await User.findOne({ $or: [{ email: emailToStore }, { username }] });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+    // Check email first (more specific error message)
+    let existingUser = await User.findOne({ email: emailToStore });
+    if (existingUser) {
+      return res.status(400).json({ message: 'An account with this email already exists' });
+    }
+    
+    // Check username
+    existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username is already taken' });
     }
 
     // Create new user (password will be hashed by pre-save hook)
     // Email will be lowercased by schema, but we've already lowercased it
-    user = new User({ 
+    const user = new User({ 
       username, 
       email: emailToStore, // Lowercased but dots preserved
       password  // Pass plain password - User model will hash it
@@ -56,6 +63,18 @@ router.post('/register', [
     });
   } catch (error) {
     console.error('Registration error:', error);
+    
+    // Handle MongoDB duplicate key errors (race condition protection)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      if (field === 'email') {
+        return res.status(400).json({ message: 'An account with this email already exists' });
+      } else if (field === 'username') {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

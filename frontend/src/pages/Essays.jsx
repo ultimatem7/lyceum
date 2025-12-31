@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import API from '../utils/api';
 import EssayCard from '../components/EssayCard';
 
@@ -27,7 +27,12 @@ const Essays = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-5xl font-serif italic text-navy mb-8">Essays & Writings</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-5xl font-serif italic text-navy">Essays & Writings</h1>
+        <Link to="/create" className="greek-button text-lg px-6 py-3">
+          + Create Essay
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="greek-card p-6">
