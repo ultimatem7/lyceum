@@ -1,24 +1,27 @@
-const { Resend } = require('resend');  // ✅ CORRECT IMPORT
+const { Resend } = require('resend');
 
 // Initialize Resend with API key from environment variable
-// Add RESEND_API_KEY to your .env file
-const resend = new Resend(process.env.RESEND_API_KEY);  // ✅ WORKS
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Use configured sender or default to Resend's testing domain
+const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
-  
+
   if (!process.env.RESEND_API_KEY) {
     throw new Error('RESEND_API_KEY is not configured');
   }
-  
+
   console.log('📧 Sending password reset email via Resend...');
+  console.log('   From:', EMAIL_FROM);
   console.log('   To:', email);
   console.log('   Reset URL:', resetUrl);
-  
+
   try {
     const data = await resend.emails.send({
-      from: 'Lyceum <theinneraxiom@gmail.com>',
+      from: `Lyceum <${EMAIL_FROM}>`,
       to: [email],
       subject: 'Lyceum - Password Reset Request',
       html: `
@@ -117,10 +120,10 @@ Lyceum - Philosophy Discussion Platform
 // Send comment notification email (when someone replies to your comment or comments on your post/essay)
 const sendCommentNotificationEmail = async (email, commenterUsername, contentTitle, commentContent, isReply, parentAuthorUsername, contentUrl) => {
   try {
-    const subject = isReply 
+    const subject = isReply
       ? `Lyceum - ${commenterUsername} replied to your comment`
       : `Lyceum - ${commenterUsername} commented on your ${contentTitle}`;
-    
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -139,16 +142,16 @@ const sendCommentNotificationEmail = async (email, commenterUsername, contentTit
                       🏛️ New ${isReply ? 'Reply' : 'Comment'}
                     </h2>
                     <p style="color: #1a1a2e; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                      ${isReply 
-                        ? `<strong>${commenterUsername}</strong> replied to your comment on "${contentTitle}"`
-                        : `<strong>${commenterUsername}</strong> commented on your "${contentTitle}"`
-                      }
+                      ${isReply
+        ? `<strong>${commenterUsername}</strong> replied to your comment on "${contentTitle}"`
+        : `<strong>${commenterUsername}</strong> commented on your "${contentTitle}"`
+      }
                     </p>
                     ${isReply && parentAuthorUsername ? (
-                      `<p style="color: #1a1a2e; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; font-style: italic;">
+        `<p style="color: #1a1a2e; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; font-style: italic;">
                         Replying to: ${parentAuthorUsername}
                       </p>`
-                    ) : ''}
+      ) : ''}
                     <div style="background-color: #ffffff; border-left: 4px solid #1a1a2e; padding: 20px; margin: 20px 0;">
                       <p style="color: #1a1a2e; font-size: 15px; line-height: 1.8; margin: 0;">
                         "${commentContent}"
@@ -185,10 +188,10 @@ const sendCommentNotificationEmail = async (email, commenterUsername, contentTit
     const text = `
 ${isReply ? 'New Reply' : 'New Comment'}
 
-${isReply 
-  ? `${commenterUsername} replied to your comment on "${contentTitle}"`
-  : `${commenterUsername} commented on your "${contentTitle}"`
-}
+${isReply
+        ? `${commenterUsername} replied to your comment on "${contentTitle}"`
+        : `${commenterUsername} commented on your "${contentTitle}"`
+      }
 
 Comment:
 "${commentContent}"
@@ -201,9 +204,9 @@ Lyceum - Philosophy Discussion Platform
     console.log('📧 Sending comment notification email via Resend...');
     console.log('   To:', email);
     console.log('   Subject:', subject);
-    
+
     const data = await resend.emails.send({
-      from: 'Lyceum <theinneraxiom@gmail.com>',
+      from: `Lyceum <${EMAIL_FROM}>`,
       to: [email],
       subject: subject,
       html: html,
