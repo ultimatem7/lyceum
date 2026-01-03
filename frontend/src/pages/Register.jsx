@@ -5,21 +5,30 @@ import { useAuth } from '../contexts/AuthContext';
 const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState(''); // ✅ NEW
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // ✅ NEW
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [passwordMatch, setPasswordMatch] = useState(true);  // ✅ NEW
+  const [passwordMatch, setPasswordMatch] = useState(true);
+  const [emailMatch, setEmailMatch] = useState(true); // ✅ NEW
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // ✅ NEW: Check password match BEFORE backend call
+
+    // Check password match
     if (password !== confirmPassword) {
       setPasswordMatch(false);
       setError('Passwords do not match');
+      return;
+    }
+
+    // ✅ NEW: Check email match
+    if (email !== confirmEmail) {
+      setEmailMatch(false);
+      setError('Emails do not match');
       return;
     }
 
@@ -30,7 +39,8 @@ const Register = () => {
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
-      setPasswordMatch(true); // Reset match error on backend error
+      setPasswordMatch(true);
+      setEmailMatch(true); // Reset on backend error
     } finally {
       setLoading(false);
     }
@@ -77,11 +87,49 @@ const Register = () => {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear errors when typing
+                  if (!emailMatch) {
+                    setEmailMatch(true);
+                    setError('');
+                  }
+                }}
                 className="greek-input w-full"
                 placeholder="philosopher@lyceum.com"
                 required
               />
+            </div>
+
+            {/* ✅ NEW: Confirm Email Field */}
+            <div>
+              <label className="block text-navy font-serif italic text-lg mb-2">Confirm Email</label>
+              <input
+                type="email"
+                value={confirmEmail}
+                onChange={(e) => {
+                  setConfirmEmail(e.target.value);
+                  setEmailMatch(email === e.target.value);
+                  if (email === e.target.value && error.includes('Emails do not match')) {
+                    setError('');
+                  }
+                }}
+                className={`greek-input w-full ${emailMatch
+                    ? ''
+                    : 'border-red-400 focus:border-red-500 ring-1 ring-red-200'
+                  }`}
+                placeholder="philosopher@lyceum.com"
+                required
+                onPaste={(e) => {
+                  e.preventDefault(); // Prevent pasting for "exactly" requirement
+                  // user asked for "type it in twice exactly"
+                }}
+              />
+              {!emailMatch && (
+                <p className="text-red-600 text-sm mt-1 font-serif italic">
+                  Emails do not match
+                </p>
+              )}
             </div>
 
             <div>
@@ -117,11 +165,10 @@ const Register = () => {
                     setError('');
                   }
                 }}
-                className={`greek-input w-full ${
-                  passwordMatch 
-                    ? '' 
+                className={`greek-input w-full ${passwordMatch
+                    ? ''
                     : 'border-red-400 focus:border-red-500 ring-1 ring-red-200'
-                }`}
+                  }`}
                 placeholder="••••••••"
                 required
               />
